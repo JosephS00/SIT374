@@ -120,7 +120,6 @@ namespace SIT374
                 }
 
                 //add item to property box that would contains all proerty name
-                label4.Text = this.DataGrid.Rows[0].Cells[0].Value.ToString();
 
             }
             catch (Exception ex)
