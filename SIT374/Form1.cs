@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using DataApi;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace SIT374
 {
@@ -24,6 +25,12 @@ namespace SIT374
         const String invalidePrompt = "invalide data";
         #endregion
 
+        #region property
+        //save the relationship between count of cell and property name
+        Dictionary<String, int> PropertyNameToIndex;
+        #endregion
+
+        #region get file 
         private void button1_Click(object sender, EventArgs e)
         {
             DialogResult result = openFileDialog1.ShowDialog();
@@ -32,9 +39,9 @@ namespace SIT374
                 textBox1.Text = openFileDialog1.FileName;
             }
         }
+        #endregion
 
-
-
+        #region data import 
         private void button2_Click(object sender, EventArgs e)
         {
             try
@@ -46,9 +53,14 @@ namespace SIT374
                 List<String[]> values = new List<String[]>();
 
                 int count = 0;
+                //save this relation
+                PropertyNameToIndex = new Dictionary<string, int>();
+                //add head name to grid and propertyBox
                 foreach (JProperty property in exampleToken)
                 {
                     keys[count] = property.Name;
+                    this.propertyBox.Items.Add(property.Name);
+                    PropertyNameToIndex.Add(property.Name, count);
                     count++;
                 }
                 // Set how many kinds of data should be show
@@ -65,6 +77,11 @@ namespace SIT374
                 //set the row style
                 DataGridViewCellStyle rowStyle = new DataGridViewCellStyle();
                 //DataGrid.RowsDefaultCellStyle;
+                //set row's data style by this
+                //this.DataGrid.Rows[0].Cells[0].Style;
+
+                //a example that changes the forecolor of the first row's second column 
+                //this.DataGrid.Rows[0].Cells[1].Style.ForeColor = Color.Red;
 
                 // Set the column header names.
                 for (int i = 0; i < DataGrid.ColumnCount; i++)
@@ -92,17 +109,30 @@ namespace SIT374
                     values.Add(aValues);
                     DataGrid.Rows.Add(aValues);
                 }
+                //add items into checkedListBoxs 
+                //Clear all existing item in check box
+                this.fieldBox.Items.Clear();
+                this.chart1.Series.Clear();
+                //add item to field box that would contain all field number
+                for (int i = 1; i <= dataArray.Count; i++)
+                {
+                    this.fieldBox.Items.Add("field " + i.ToString());
+                }
+
+                //add item to property box that would contains all proerty name
+                label4.Text = this.DataGrid.Rows[0].Cells[0].Value.ToString();
+
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString());
-            } 
+            }
         }
 
         private Boolean Validate(JProperty jProperty)
         {
             //use the DataCompare class to check the input data
-            switch(jProperty.Name)
+            switch (jProperty.Name)
             {
                 case "Accelaration Pedal":
                     return DataCompare.AccelarationPedal(Convert.ToDouble(jProperty.Value.ToString()));
@@ -134,7 +164,7 @@ namespace SIT374
                 case "Fuel Consumption":
                     return DataCompare.FuelConsumption(Convert.ToDouble(jProperty.Value.ToString()));
                     break;
-                case "CO2 Emissions":
+                case "CO2 Emmissions":
                     return DataCompare.CO2Emissions(Convert.ToDouble(jProperty.Value.ToString()));
                     break;
                 case "Weight":
@@ -150,5 +180,78 @@ namespace SIT374
         {
 
         }
+        #endregion
+
+        #region Generate Bar Chart
+        private void GenerateBarChart_Click(object sender, EventArgs e)
+        {
+            //get checked items in checkedListBox1
+            this.chart1.Series.Clear();
+            for (int i = 0; i < this.fieldBox.Items.Count; i++)
+            {
+                //if field is checked, show them in chart
+                if (this.fieldBox.GetItemChecked(i))
+                {
+                    String itemName = this.fieldBox.Items[i].ToString();
+
+                    this.chart1.Series.Add(new Series(itemName));
+                    AddPropertyToChart(itemName, i);
+                }
+            }
+        }
+
+        private void AddPropertyToChart(String field, int fieldNumber)
+        {
+            //add selected properties into Chart
+            for (int i = 0; i < propertyBox.CheckedItems.Count; i++)
+            {
+                String currentProperty = propertyBox.CheckedItems[i].ToString();
+
+                this.chart1.Series[field].Points.AddXY(currentProperty, this.DataGrid.Rows[fieldNumber].Cells[PropertyNameToIndex[currentProperty]].Value.ToString());
+            }
+        }
+        #endregion
+
+        #region Generate Line Chart
+        private void GenerateLineChart_Click(object sender, EventArgs e)
+        {
+            this.chart1.Series.Clear();
+            //for (int i = 0; i < this.fieldBox.Items.Count; i++)
+            //{
+            //    //if field is checked, show them in chart
+            //    if (this.fieldBox.GetItemChecked(i))
+            //    {
+            //        String itemName = this.fieldBox.Items[i].ToString();
+
+            //        Series lineChartItem = new Series(itemName);
+            //        lineChartItem.ChartType = SeriesChartType.Line;
+
+            //        this.chart1.Series.Add(new Series(itemName));
+
+            //        AddPropertyToChart(itemName, i);
+            //    }
+            //}
+            for (int i = 0; i < propertyBox.CheckedItems.Count; i++)
+            {
+                String currentProperty = propertyBox.CheckedItems[i].ToString();
+
+                Series lineChartItem = new Series(currentProperty);
+                lineChartItem.ChartType = SeriesChartType.Line;
+                for (int j = 0; j < this.fieldBox.Items.Count; j++)
+                {
+                    //if field is checked, show them in chart
+                    if (this.fieldBox.GetItemChecked(j))
+                    {
+                        String itemName = this.fieldBox.Items[j].ToString();
+
+                        lineChartItem.Points.AddXY(itemName, this.DataGrid.Rows[j].Cells[PropertyNameToIndex[currentProperty]].Value.ToString());
+
+                    }
+                }
+                this.chart1.Series.Add(lineChartItem);
+            }
+        }
+        #endregion
+
     }
 }
